@@ -715,7 +715,9 @@ impl BacktracePrinter {
             if frame_delta != 0 {
                 print_hidden!(frame_delta);
             }
-            frame.print(frame.n, out, self)?;
+            if !frame.is_dependency_code() {
+                frame.print(frame.n, out, self)?;
+            }
             last_n = frame.n;
         }
 
