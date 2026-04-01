@@ -1,4 +1,4 @@
-use color_backtrace::{default_output_stream, BacktracePrinter};
+use comfy_color_backtrace::{default_output_stream, BacktracePrinter};
 
 fn main() {
     BacktracePrinter::new()

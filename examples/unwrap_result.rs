@@ -15,7 +15,7 @@ fn fn1() {
 }
 
 fn main() {
-    color_backtrace::install();
+    comfy_color_backtrace::install();
     fn1();
 }
 

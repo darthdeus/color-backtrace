@@ -20,12 +20,12 @@
 //!
 //! In your main function, just insert the following snippet. That's it!
 //! ```rust
-//! color_backtrace::install();
+//! comfy_color_backtrace::install();
 //! ```
 //!
 //! If you want to customize some settings, you can instead do:
 //! ```rust
-//! use color_backtrace::{default_output_stream, BacktracePrinter};
+//! use comfy_color_backtrace::{default_output_stream, BacktracePrinter};
 //! BacktracePrinter::new().message("Custom message!").install(default_output_stream());
 //! ```
 //!
@@ -39,7 +39,7 @@
 use std::env;
 use std::fs::File;
 use std::io::{BufRead, BufReader, ErrorKind};
-use std::panic::PanicInfo;
+use std::panic::PanicHookInfo;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use termcolor::{Ansi, Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
@@ -102,7 +102,7 @@ impl Verbosity {
 /// This currently is a convenience shortcut for writing
 ///
 /// ```rust
-/// use color_backtrace::{BacktracePrinter, default_output_stream};
+/// use comfy_color_backtrace::{BacktracePrinter, default_output_stream};
 /// BacktracePrinter::default().install(default_output_stream())
 /// ```
 pub fn install() {
@@ -114,7 +114,8 @@ pub fn install() {
 /// If stderr is attached to a tty, this is a colorized stderr, else it's
 /// a plain (colorless) stderr.
 pub fn default_output_stream() -> Box<StandardStream> {
-    Box::new(StandardStream::stderr(if atty::is(atty::Stream::Stderr) {
+    use std::io::IsTerminal;
+    Box::new(StandardStream::stderr(if std::io::stderr().is_terminal() {
         ColorChoice::Always
     } else {
         ColorChoice::Never
@@ -127,7 +128,7 @@ pub fn default_output_stream() -> Box<StandardStream> {
 )]
 pub fn create_panic_handler(
     printer: BacktracePrinter,
-) -> Box<dyn Fn(&PanicInfo<'_>) + 'static + Sync + Send> {
+) -> Box<dyn Fn(&PanicHookInfo<'_>) + 'static + Sync + Send> {
     let out_stream_mutex = Mutex::new(default_output_stream());
     Box::new(move |pi| {
         let mut lock = out_stream_mutex.lock().unwrap();
@@ -169,6 +170,7 @@ impl Frame {
     fn is_dependency_code(&self) -> bool {
         const SYM_PREFIXES: &[&str] = &[
             "std::",
+            "test::",
             "core::",
             "backtrace::backtrace::",
             "_rust_begin_unwind",
@@ -372,14 +374,12 @@ impl Frame {
 
         // Does the function have a hash suffix?
         // (dodging a dep on the regex crate here)
-        let name = self
-            .name
-            .as_ref()
-            .map(|s| s.as_str())
-            .unwrap_or("<unknown>");
+        let name = self.name.as_deref().unwrap_or("<unknown>");
         let has_hash_suffix = name.len() > 19
             && &name[name.len() - 19..name.len() - 16] == "::h"
-            && name[name.len() - 16..].chars().all(|x| x.is_digit(16));
+            && name[name.len() - 16..]
+                .chars()
+                .all(|x| x.is_ascii_hexdigit());
 
         // Print function name.
         out.set_color(if is_dependency_code {
@@ -439,7 +439,7 @@ pub fn default_frame_filter(frames: &mut Vec<&Frame>) {
     let bottom_cutoff = frames
         .iter()
         .position(|x| x.is_runtime_init_code())
-        .unwrap_or_else(|| frames.len());
+        .unwrap_or(frames.len());
 
     let rng = top_cutoff..=bottom_cutoff;
     frames.retain(|x| rng.contains(&x.n))
@@ -606,7 +606,7 @@ impl BacktracePrinter {
     /// # Example
     ///
     /// ```rust
-    /// use color_backtrace::{default_output_stream, BacktracePrinter};
+    /// use comfy_color_backtrace::{default_output_stream, BacktracePrinter};
     ///
     /// BacktracePrinter::new()
     ///     .add_frame_filter(Box::new(|frames| {
@@ -643,7 +643,7 @@ impl BacktracePrinter {
     pub fn into_panic_handler(
         mut self,
         out: impl WriteColor + Sync + Send + 'static,
-    ) -> Box<dyn Fn(&PanicInfo<'_>) + 'static + Sync + Send> {
+    ) -> Box<dyn Fn(&PanicHookInfo<'_>) + 'static + Sync + Send> {
         self.is_panic_handler = true;
         let out_stream_mutex = Mutex::new(out);
         Box::new(move |pi| {
@@ -739,7 +739,7 @@ impl BacktracePrinter {
     }
 
     /// Pretty-prints a [`PanicInfo`](PanicInfo) struct to an output stream.
-    pub fn print_panic_info(&self, pi: &PanicInfo, out: &mut impl WriteColor) -> IOResult {
+    pub fn print_panic_info(&self, pi: &PanicHookInfo, out: &mut impl WriteColor) -> IOResult {
         out.set_color(&self.colors.header)?;
         writeln!(out, "{}", self.message)?;
         out.reset()?;
@@ -827,7 +827,7 @@ pub fn print_backtrace(trace: &backtrace::Backtrace, s: &mut BacktracePrinter) -
     since = "0.4.0",
     note = "Use `BacktracePrinter::print_panic_info` instead`"
 )]
-pub fn print_panic_info(pi: &PanicInfo, s: &mut BacktracePrinter) -> IOResult {
+pub fn print_panic_info(pi: &PanicHookInfo, s: &mut BacktracePrinter) -> IOResult {
     s.print_panic_info(pi, &mut default_output_stream())
 }
 

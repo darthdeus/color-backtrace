@@ -8,6 +8,6 @@ fn fn2() {
 }
 
 fn main() {
-    color_backtrace::install();
+    comfy_color_backtrace::install();
     fn2();
 }

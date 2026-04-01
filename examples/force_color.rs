@@ -19,7 +19,7 @@ fn fn1() {
 }
 
 fn main() {
-    use color_backtrace::{termcolor::StandardStream, BacktracePrinter};
+    use comfy_color_backtrace::{termcolor::StandardStream, BacktracePrinter};
     let out = StandardStream::stderr(termcolor::ColorChoice::Always);
     BacktracePrinter::new().install(out);
 

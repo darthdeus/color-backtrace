@@ -1,4 +1,4 @@
-use color_backtrace::BacktracePrinter;
+use comfy_color_backtrace::BacktracePrinter;
 
 fn main() -> Result<(), std::io::Error> {
     let trace = backtrace::Backtrace::new();

@@ -1,8 +1,8 @@
 [package]
 name = "comfy-color-backtrace"
-version = "0.6.0"
+version = "0.6.1"
 authors = ["Joel Höner <athre0z@zyantific.com>"]
-edition = "2018"
+edition = "2021"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/athre0z/color-backtrace"
 description = "Comfy fork of Colorful panic backtraces"
@@ -23,6 +23,5 @@ resolve-modules = ["regex"]
 
 [dependencies]
 termcolor = "1.0"
-atty = "0.2"
 backtrace = "0.3"
 regex = { version = "1.4", optional = true }
